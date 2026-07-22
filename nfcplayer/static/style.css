@@ -104,6 +104,14 @@ footer {
   font-size: 0.8rem;
 }
 
+.bt-warn {
+  background: #fff2cc;
+  border: 1px solid #f1c232;
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 400;
+}
+
 .bt-diag {
   font-size: 0.8rem;
   color: #777;

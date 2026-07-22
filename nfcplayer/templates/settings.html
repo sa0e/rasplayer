@@ -35,6 +35,13 @@
 <h2>Bluetooth speaker</h2>
 <div class="card-form">
   <p id="bt-current">Checking…</p>
+  <p id="bt-backend-warn" class="bt-warn" hidden>
+    ⚠ No Bluetooth audio layer detected (PipeWire, PulseAudio, or bluez-alsa).
+    Without one the speaker disconnects about 30 seconds after connecting and
+    no audio can reach it. On Raspberry Pi OS Lite run:
+    <code>sudo apt install bluez-alsa-utils libasound2-plugin-bluez</code>
+    and restart the service. See the README's Bluetooth notes.
+  </p>
   <div class="form-actions">
     <button type="button" id="bt-scan-btn">Scan for speakers</button>
     <button type="button" id="bt-forget-btn" class="danger" hidden>Forget speaker</button>

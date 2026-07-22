@@ -88,11 +88,18 @@ Raspberry Pi OS). How audio reaches the speaker depends on your image:
 - **Raspberry Pi OS (desktop / with PipeWire or PulseAudio):** nothing to
   do — when the speaker connects it becomes the default output and mpg123
   follows it.
-- **Raspberry Pi OS Lite (bare ALSA):** install bluez-alsa so the speaker
-  shows up as an ALSA PCM: `sudo apt install bluez-alsa-utils`. The player
+- **Raspberry Pi OS Lite (bare ALSA):** install bluez-alsa so BlueZ has an
+  audio endpoint and the speaker shows up as an ALSA PCM:
+  `sudo apt install bluez-alsa-utils libasound2-plugin-bluez`. The player
   detects this and targets the speaker's PCM automatically while it is
   connected; if the speaker drops off, playback falls back to the default
   ALSA output.
+
+  **Symptom without it:** the speaker connects fine, then disconnects about
+  30 seconds later — BlueZ accepted the link but nothing registered an A2DP
+  audio endpoint, so the speaker gives up. The Settings page shows a warning
+  when no audio layer is detected. After installing, check the daemon is up
+  with `pgrep bluealsad` (older versions: `pgrep bluealsa`).
 
 The service unit already adds the `bluetooth` group so `bluetoothctl` works
 without root, and the `netdev` group so the app can clear rfkill soft-blocks

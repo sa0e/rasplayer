@@ -6,11 +6,13 @@
   const scanBtn = document.getElementById('bt-scan-btn');
   const forgetBtn = document.getElementById('bt-forget-btn');
   const results = document.getElementById('bt-results');
+  const backendWarn = document.getElementById('bt-backend-warn');
 
   function refresh() {
     fetch('/api/bt/status')
       .then(r => r.json())
       .then(s => {
+        backendWarn.hidden = !!s.error || s.backend !== null;
         if (s.error) {
           current.textContent = '⚠ ' + s.error;
           forgetBtn.hidden = true;
