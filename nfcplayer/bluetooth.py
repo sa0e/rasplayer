@@ -81,6 +81,37 @@ def _session(setup, wait_seconds, teardown):
     return output
 
 
+def _rfkill_state():
+    """Output of 'rfkill list bluetooth', or '' if rfkill is unusable."""
+    if shutil.which("rfkill") is None:
+        return ""
+    try:
+        proc = subprocess.run(
+            ["rfkill", "list", "bluetooth"],
+            capture_output=True, text=True, errors="replace", timeout=5,
+        )
+        return proc.stdout
+    except (subprocess.TimeoutExpired, OSError):
+        return ""
+
+
+def _rfkill_unblock():
+    """Try to clear a soft rfkill block; needs write access to /dev/rfkill
+    (the service user's netdev group membership provides it)."""
+    if shutil.which("rfkill") is None:
+        return False
+    try:
+        return subprocess.run(
+            ["rfkill", "unblock", "bluetooth"], capture_output=True, timeout=5
+        ).returncode == 0
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+
+
+def _power_on_failed(output):
+    return any(token in output for token in ("Blocked", "blocked", "Failed", "Error"))
+
+
 def _check_adapter():
     """Power the adapter on; raise with a specific reason if that fails."""
     show = _btctl("show")
@@ -90,13 +121,33 @@ def _check_adapter():
             "(bluetoothctl show returned nothing useful)"
         )
     output = _btctl("power", "on")
-    if "Blocked" in output or "blocked" in output:
+    if _power_on_failed(output):
+        # A lingering rfkill soft-block is the usual culprit (systemd
+        # persists rfkill state across reboots). Clear it and retry once.
+        if _rfkill_unblock():
+            log.info("Power-on failed; cleared rfkill block and retrying")
+            output = _btctl("power", "on")
+    if not _power_on_failed(output):
+        return
+
+    detail = output.strip().splitlines()[-1] if output.strip() else "unknown error"
+    rfkill = _rfkill_state()
+    if re.search(r"Hard blocked:\s*yes", rfkill):
         raise BluetoothUnavailable(
-            "Bluetooth is blocked by rfkill — run: sudo rfkill unblock bluetooth"
+            "Bluetooth is hard-blocked (disabled in firmware/config, e.g. "
+            "dtoverlay=disable-bt in /boot/config.txt) — " + detail
         )
-    if "Failed" in output or "Error" in output:
-        detail = output.strip().splitlines()[-1] if output.strip() else "unknown error"
-        raise BluetoothUnavailable(f"Could not power on the Bluetooth adapter: {detail}")
+    if re.search(r"Soft blocked:\s*yes", rfkill):
+        raise BluetoothUnavailable(
+            "Bluetooth is soft-blocked by rfkill and could not be unblocked "
+            "automatically — run: sudo rfkill unblock bluetooth (" + detail + ")"
+        )
+    raise BluetoothUnavailable(
+        f"Could not power on the Bluetooth adapter: {detail}. Check "
+        "'systemctl status bluetooth hciuart' and 'dmesg | grep -iE "
+        "\"bluetooth|brcm\"' on the Pi for adapter/firmware errors "
+        "(see README troubleshooting)."
+    )
 
 
 def diagnostics():
@@ -111,6 +162,7 @@ def diagnostics():
         "bluetoothctl": shutil.which("bluetoothctl") or "not found",
         "bluetoothctl_version": _btctl("version").strip(),
         "controller": summary or controller.strip()[:200] or "no output",
+        "rfkill": " · ".join(_rfkill_state().split()) or "unavailable",
         "backend": audio_backend(),
     }
 

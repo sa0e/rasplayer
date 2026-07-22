@@ -5,7 +5,7 @@ After=sound.target network.target bluetooth.target
 [Service]
 Type=simple
 User=pi
-SupplementaryGroups=input audio bluetooth
+SupplementaryGroups=input audio bluetooth netdev
 WorkingDirectory=/home/pi/nfcplayer
 ExecStart=/home/pi/nfcplayer/venv/bin/python -m nfcplayer
 Environment=NFCPLAYER_DB=/home/pi/nfcplayer/nfcplayer.db

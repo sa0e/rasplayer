@@ -217,6 +217,56 @@ class TestBluetoothParsing(unittest.TestCase):
         self.assertIsNone(bluetooth.MAC_RE.fullmatch("not-a-mac; rm -rf"))
 
 
+class TestCheckAdapter(unittest.TestCase):
+    """Power-on failure handling: rfkill auto-unblock and error messages."""
+
+    CONTROLLER = "Controller B8:27:EB:AA:BB:CC (public)\n\tPowered: no\n"
+    POWER_OK = "Changing power on succeeded\n"
+    POWER_FAIL = "Failed to set power on: org.bluez.Error.Failed\n"
+
+    def _check(self, btctl_outputs, unblock=False, rfkill_state=""):
+        with unittest.mock.patch.object(
+            bluetooth, "_btctl", side_effect=btctl_outputs
+        ), unittest.mock.patch.object(
+            bluetooth, "_rfkill_unblock", return_value=unblock
+        ), unittest.mock.patch.object(
+            bluetooth, "_rfkill_state", return_value=rfkill_state
+        ):
+            bluetooth._check_adapter()
+
+    def test_no_controller(self):
+        with self.assertRaisesRegex(bluetooth.BluetoothUnavailable, "No Bluetooth adapter"):
+            self._check(["No default controller available\n"])
+
+    def test_power_on_ok(self):
+        self._check([self.CONTROLLER, self.POWER_OK])  # no exception
+
+    def test_rfkill_autorecovery(self):
+        # power fails, unblock succeeds, retry succeeds -> no exception
+        self._check(
+            [self.CONTROLLER, self.POWER_FAIL, self.POWER_OK], unblock=True
+        )
+
+    def test_soft_blocked_message(self):
+        rfkill = "0: hci0: Bluetooth\n\tSoft blocked: yes\n\tHard blocked: no\n"
+        with self.assertRaisesRegex(bluetooth.BluetoothUnavailable, "rfkill unblock"):
+            self._check(
+                [self.CONTROLLER, self.POWER_FAIL, self.POWER_FAIL],
+                unblock=True, rfkill_state=rfkill,
+            )
+
+    def test_hard_blocked_message(self):
+        rfkill = "0: hci0: Bluetooth\n\tSoft blocked: no\n\tHard blocked: yes\n"
+        with self.assertRaisesRegex(bluetooth.BluetoothUnavailable, "hard-blocked"):
+            self._check(
+                [self.CONTROLLER, self.POWER_FAIL], unblock=False, rfkill_state=rfkill
+            )
+
+    def test_generic_failure_message(self):
+        with self.assertRaisesRegex(bluetooth.BluetoothUnavailable, "bluetooth hciuart"):
+            self._check([self.CONTROLLER, self.POWER_FAIL], unblock=False)
+
+
 class TestOutputArgs(unittest.TestCase):
     """Audio routing precedence: explicit ALSA device > bluealsa BT > default."""
 

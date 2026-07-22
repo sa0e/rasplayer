@@ -95,7 +95,30 @@ Raspberry Pi OS). How audio reaches the speaker depends on your image:
   ALSA output.
 
 The service unit already adds the `bluetooth` group so `bluetoothctl` works
-without root.
+without root, and the `netdev` group so the app can clear rfkill soft-blocks
+by itself.
+
+### Troubleshooting: "Could not power on the Bluetooth adapter"
+
+The adapter exists but BlueZ can't switch the radio on. Work down this list
+on the Pi:
+
+1. **rfkill block** (most common — systemd remembers a block across
+   reboots, e.g. if Bluetooth was ever disabled in raspi-config):
+   `rfkill list` — if anything says `Soft blocked: yes`, run
+   `sudo rfkill unblock bluetooth`. The app tries this automatically, but
+   needs the `netdev` group (re-copy `deploy/nfcplayer.service` and run
+   `sudo systemctl daemon-reload && sudo systemctl restart nfcplayer` if
+   your unit predates it).
+2. **Bluetooth services**: `systemctl status bluetooth hciuart` — both
+   should be active. `hciuart` attaches the Pi's onboard radio; if it
+   failed, reboot after checking `/boot/config.txt` for
+   `dtoverlay=disable-bt` (remove it if present).
+3. **Firmware**: `dmesg | grep -iE 'bluetooth|brcm'` — lines like
+   "Direct firmware load ... failed" mean missing firmware:
+   `sudo apt install --reinstall bluez-firmware pi-bluetooth`, then reboot.
+4. Retry the scan — the diagnostics block under an empty scan now shows
+   the rfkill state too.
 
 ## Development without the hardware
 

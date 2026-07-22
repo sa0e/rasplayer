@@ -53,6 +53,7 @@
               ' · ' + d.bluetoothctl_version +
               ' (' + d.bluetoothctl + ')' +
               '\n' + d.controller +
+              '\nrfkill: ' + d.rfkill +
               '\naudio backend: ' + (d.backend || 'none detected');
             diag.appendChild(pre);
             results.appendChild(diag);
