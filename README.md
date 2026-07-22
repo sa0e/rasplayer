@@ -72,8 +72,30 @@ your network.
 - **Settings** — music folder path, NFC device path, player command, ALSA
   output device. Music folder changes apply immediately; device changes need
   a service restart.
+- **Bluetooth speaker** — on the Settings page: scan for nearby speakers,
+  connect one (put it in pairing mode the first time), and it's remembered.
+  A background thread reconnects it automatically at boot and whenever it
+  comes back in range/powers on. "Forget speaker" unpairs and reverts to the
+  default output.
 
 There is no authentication — the UI is meant for a trusted home LAN.
+
+### Bluetooth audio notes
+
+Bluetooth control uses `bluetoothctl` (the `bluez` package, preinstalled on
+Raspberry Pi OS). How audio reaches the speaker depends on your image:
+
+- **Raspberry Pi OS (desktop / with PipeWire or PulseAudio):** nothing to
+  do — when the speaker connects it becomes the default output and mpg123
+  follows it.
+- **Raspberry Pi OS Lite (bare ALSA):** install bluez-alsa so the speaker
+  shows up as an ALSA PCM: `sudo apt install bluez-alsa-utils`. The player
+  detects this and targets the speaker's PCM automatically while it is
+  connected; if the speaker drops off, playback falls back to the default
+  ALSA output.
+
+The service unit already adds the `bluetooth` group so `bluetoothctl` works
+without root.
 
 ## Development without the hardware
 

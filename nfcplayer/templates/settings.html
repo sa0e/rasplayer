@@ -32,4 +32,19 @@
   </div>
 </form>
 
+<h2>Bluetooth speaker</h2>
+<div class="card-form">
+  <p id="bt-current">Checking…</p>
+  <div class="form-actions">
+    <button type="button" id="bt-scan-btn">Scan for speakers</button>
+    <button type="button" id="bt-forget-btn" class="danger" hidden>Forget speaker</button>
+  </div>
+  <ul id="bt-results" class="bt-results"></ul>
+  <p class="hint">The chosen speaker is remembered and reconnected automatically at boot
+  and whenever it comes back in range. Put the speaker in pairing mode the first time.</p>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='bt.js') }}"></script>
 {% endblock %}

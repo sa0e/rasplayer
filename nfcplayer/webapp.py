@@ -14,7 +14,7 @@ from flask import (
     url_for,
 )
 
-from . import config, db, player as player_mod, reader
+from . import __version__, bluetooth, config, db, player as player_mod, reader
 
 MODE_LABELS = {
     "single": "Single file",
@@ -66,7 +66,7 @@ def create_app(scanbus, player):
 
     @app.context_processor
     def inject_globals():
-        return {"mode_labels": MODE_LABELS}
+        return {"mode_labels": MODE_LABELS, "app_version": __version__}
 
     # --- pages ---
 
@@ -197,6 +197,65 @@ def create_app(scanbus, player):
     @app.post("/api/stop")
     def api_stop():
         player.stop()
+        return jsonify({"ok": True})
+
+    # --- Bluetooth speaker ---
+
+    @app.get("/api/bt/status")
+    def api_bt_status():
+        mac = db.get_setting("bt_device")
+        status = {
+            "mac": mac,
+            "name": db.get_setting("bt_device_name"),
+            "connected": False,
+            "backend": bluetooth.audio_backend(),
+        }
+        try:
+            bluetooth.ensure_available()
+            if mac:
+                status["connected"] = bluetooth.is_connected(mac)
+        except bluetooth.BluetoothUnavailable as exc:
+            status["error"] = str(exc)
+        return jsonify(status)
+
+    @app.post("/api/bt/scan")
+    def api_bt_scan():
+        seconds = request.args.get("seconds", type=int, default=10)
+        seconds = max(3, min(seconds, 30))
+        try:
+            devices = bluetooth.scan(seconds)
+            payload = {"devices": devices}
+            if not devices:
+                payload["diagnostics"] = bluetooth.diagnostics()
+            return jsonify(payload)
+        except bluetooth.BluetoothUnavailable as exc:
+            return jsonify({"error": str(exc)}), 503
+
+    @app.post("/api/bt/connect")
+    def api_bt_connect():
+        mac = (request.form.get("mac") or request.args.get("mac") or "").strip().upper()
+        if not bluetooth.MAC_RE.fullmatch(mac):
+            abort(400, "Invalid MAC address")
+        try:
+            ok, message = bluetooth.connect(mac)
+        except bluetooth.BluetoothUnavailable as exc:
+            return jsonify({"error": str(exc)}), 503
+        if not ok:
+            return jsonify({"error": message}), 502
+        db.set_setting("bt_device", mac)
+        db.set_setting("bt_device_name", message)
+        return jsonify({"ok": True, "name": message})
+
+    @app.post("/api/bt/forget")
+    def api_bt_forget():
+        mac = db.get_setting("bt_device")
+        if mac:
+            try:
+                bluetooth.forget(mac)
+            except bluetooth.BluetoothUnavailable:
+                pass
+        db.set_setting("bt_device", "")
+        db.set_setting("bt_device_name", "")
         return jsonify({"ok": True})
 
     if config.DEV_MODE:

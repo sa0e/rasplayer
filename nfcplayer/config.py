@@ -25,6 +25,8 @@ SETTINGS_DEFAULTS = {
     "nfc_device": os.environ.get("NFCPLAYER_DEVICE", ""),
     "player_cmd": os.environ.get("NFCPLAYER_PLAYER_CMD", "mpg123 -q"),
     "alsa_device": os.environ.get("NFCPLAYER_ALSA_DEVICE", ""),
+    "bt_device": "",       # MAC of the chosen Bluetooth speaker ('' = none)
+    "bt_device_name": "",  # its human name, for display only
 }
 
 # File extensions considered playable when picking from a directory.

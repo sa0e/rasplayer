@@ -11,6 +11,18 @@
         ".venv/bin/python", "-m", "nfcplayer", "--fake-input"
       ],
       "port": 8080
+    },
+    {
+      "name": "nfcplayer-btmock",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PATH=/tmp/claude-1000/-home-sa0e-Projects-nfcplayer-software/c7527799-f7df-42a7-8fe7-fa64fca49e04/scratchpad/fakebin:/usr/local/bin:/usr/bin:/bin",
+        "NFCPLAYER_DEV=1",
+        "NFCPLAYER_DB=/tmp/claude-1000/-home-sa0e-Projects-nfcplayer-software/c7527799-f7df-42a7-8fe7-fa64fca49e04/scratchpad/nfc-btmock.db",
+        "NFCPLAYER_MUSIC_ROOT=/tmp/claude-1000/-home-sa0e-Projects-nfcplayer-software/c7527799-f7df-42a7-8fe7-fa64fca49e04/scratchpad/music",
+        ".venv/bin/python", "-m", "nfcplayer", "--fake-input"
+      ],
+      "port": 8080
     }
   ]
 }

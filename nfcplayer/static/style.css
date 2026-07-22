@@ -96,6 +96,36 @@ button.danger:hover { background: #822; }
 #browser-list a:hover { color: #3a5a40; }
 #browser-list .pick { color: #3a5a40; font-weight: 600; }
 
+footer {
+  max-width: 60rem;
+  margin: 2rem auto 1rem;
+  padding: 0 1rem;
+  color: #999;
+  font-size: 0.8rem;
+}
+
+.bt-diag {
+  font-size: 0.8rem;
+  color: #777;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: #f7f5f0;
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.bt-results { list-style: none; margin: 0.75rem 0 0; padding: 0; }
+.bt-results li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.4rem 0.2rem;
+  border-bottom: 1px solid #f0ede7;
+}
+.bt-results li:last-child { border-bottom: none; }
+
 @media (max-width: 40rem) {
   td.actions { white-space: normal; }
   th:nth-child(4), td:nth-child(4) { display: none; }

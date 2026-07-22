@@ -3,7 +3,7 @@
 import argparse
 import logging
 
-from . import config, db, reader, webapp
+from . import bluetooth, config, db, reader, webapp
 from .player import Player
 from .scanbus import ScanBus
 
@@ -25,6 +25,9 @@ def main():
     )
     log = logging.getLogger("nfcplayer")
 
+    from . import __version__
+    log.info("NFC player v%s starting", __version__)
+
     db.init()
     log.info("Database: %s", config.DB_PATH)
     log.info("Music root: %s", db.get_setting("music_root"))
@@ -32,6 +35,7 @@ def main():
     scanbus = ScanBus()
     player = Player()
     reader.start_reader(scanbus, player, fake_input=args.fake_input)
+    bluetooth.start_autoconnect()
 
     app = webapp.create_app(scanbus, player)
     log.info("Admin interface on http://%s:%d/", args.host, args.port)

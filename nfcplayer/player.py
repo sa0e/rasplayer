@@ -7,9 +7,30 @@ import shlex
 import subprocess
 import threading
 
-from . import config, db
+from . import bluetooth, config, db
 
 log = logging.getLogger(__name__)
+
+
+def output_args():
+    """Extra mpg123 args for audio routing.
+
+    An explicit ALSA device setting always wins. Otherwise, on bare-ALSA
+    systems running bluez-alsa, target the configured Bluetooth speaker's
+    PCM while it is connected. PipeWire/PulseAudio systems route the
+    default output to the speaker themselves, so no args are needed.
+    """
+    alsa_device = db.get_setting("alsa_device")
+    if alsa_device:
+        return ["-a", alsa_device]
+    mac = db.get_setting("bt_device")
+    if mac:
+        try:
+            if bluetooth.audio_backend() == "bluealsa" and bluetooth.is_connected(mac):
+                return ["-a", f"bluealsa:DEV={mac},PROFILE=a2dp"]
+        except bluetooth.BluetoothUnavailable:
+            pass
+    return []
 
 
 class Player:
@@ -21,9 +42,7 @@ class Player:
 
     def play(self, paths):
         cmd = shlex.split(db.get_setting("player_cmd")) or ["mpg123", "-q"]
-        alsa_device = db.get_setting("alsa_device")
-        if alsa_device:
-            cmd += ["-a", alsa_device]
+        cmd += output_args()
         cmd += list(paths)
         with self._lock:
             self._stop_locked()

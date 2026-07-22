@@ -6,7 +6,7 @@ import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from nfcplayer import db
+from nfcplayer import bluetooth, db
 from nfcplayer.reader import KeyDecoder
 from nfcplayer.player import pick_random
 
@@ -161,6 +161,103 @@ class TestBrowseTraversal(unittest.TestCase):
         data = resp.get_json()
         self.assertEqual(data["parent"], "")
         self.assertEqual(data["files"][0]["path"], "Kids/song.mp3")
+
+
+class TestBluetoothParsing(unittest.TestCase):
+    def test_parse_scan_output(self):
+        # A realistic interactive-session transcript: ANSI colors on [NEW]
+        # events, [CHG] RSSI noise, and a plain `devices` dump at the end.
+        output = (
+            "Discovery started\n"
+            "\x1b[0;93mDiscovering: yes\x1b[0m\n"
+            "\x1b[0;92m[NEW]\x1b[0m Device AA:BB:CC:DD:EE:FF JBL Flip 5\n"
+            "\x1b[0;92m[NEW]\x1b[0m Device 11:22:33:44:55:66 11-22-33-44-55-66\n"
+            "[CHG] Device AA:BB:CC:DD:EE:FF RSSI: -52\n"
+            "[DEL] Device 99:99:99:99:99:99 Gone Device\n"
+            "Device AA:BB:CC:DD:EE:FF JBL Flip 5 Renamed\n"
+        )
+        found = bluetooth.parse_scan_output(output)
+        # RSSI/[DEL] noise ignored; the devices-dump name wins over [NEW]
+        self.assertEqual(found["AA:BB:CC:DD:EE:FF"], "JBL Flip 5 Renamed")
+        self.assertEqual(found["11:22:33:44:55:66"], "11-22-33-44-55-66")
+        self.assertNotIn("99:99:99:99:99:99", found)
+
+    def test_parse_scan_output_empty(self):
+        self.assertEqual(bluetooth.parse_scan_output(""), {})
+
+    def test_parse_scan_output_prompt_prefixed(self):
+        # Lines can carry the interactive prompt before the event tag.
+        output = "[bluetooth]# \x1b[0;92m[NEW]\x1b[0m Device AA:BB:CC:DD:EE:FF Boombox\n"
+        self.assertEqual(
+            bluetooth.parse_scan_output(output),
+            {"AA:BB:CC:DD:EE:FF": "Boombox"},
+        )
+
+    def test_parse_info(self):
+        output = (
+            "Device AA:BB:CC:DD:EE:FF (public)\n"
+            "\tName: JBL Flip 5\n"
+            "\tAlias: JBL Flip 5\n"
+            "\tIcon: audio-card\n"
+            "\tPaired: yes\n"
+            "\tTrusted: yes\n"
+            "\tBlocked: no\n"
+            "\tConnected: no\n"
+        )
+        info = bluetooth.parse_info(output)
+        self.assertEqual(info["name"], "JBL Flip 5")
+        self.assertEqual(info["icon"], "audio-card")
+        self.assertTrue(info["paired"])
+        self.assertTrue(info["trusted"])
+        self.assertFalse(info["connected"])
+
+    def test_mac_validation(self):
+        self.assertTrue(bluetooth.MAC_RE.fullmatch("AA:BB:CC:DD:EE:FF"))
+        self.assertIsNone(bluetooth.MAC_RE.fullmatch("AA:BB:CC:DD:EE"))
+        self.assertIsNone(bluetooth.MAC_RE.fullmatch("not-a-mac; rm -rf"))
+
+
+class TestOutputArgs(unittest.TestCase):
+    """Audio routing precedence: explicit ALSA device > bluealsa BT > default."""
+
+    def _args(self, settings, backend=None, connected=False):
+        from nfcplayer import player
+        with unittest.mock.patch.object(
+            player.db, "get_setting", side_effect=lambda k: settings.get(k, "")
+        ), unittest.mock.patch.object(
+            player.bluetooth, "audio_backend", return_value=backend
+        ), unittest.mock.patch.object(
+            player.bluetooth, "is_connected", return_value=connected
+        ):
+            return player.output_args()
+
+    def test_explicit_alsa_device_wins(self):
+        args = self._args(
+            {"alsa_device": "hw:1,0", "bt_device": "AA:BB:CC:DD:EE:FF"},
+            backend="bluealsa", connected=True,
+        )
+        self.assertEqual(args, ["-a", "hw:1,0"])
+
+    def test_bluealsa_when_connected(self):
+        args = self._args(
+            {"bt_device": "AA:BB:CC:DD:EE:FF"}, backend="bluealsa", connected=True
+        )
+        self.assertEqual(args, ["-a", "bluealsa:DEV=AA:BB:CC:DD:EE:FF,PROFILE=a2dp"])
+
+    def test_bluealsa_not_connected_falls_back(self):
+        args = self._args(
+            {"bt_device": "AA:BB:CC:DD:EE:FF"}, backend="bluealsa", connected=False
+        )
+        self.assertEqual(args, [])
+
+    def test_pulse_backend_needs_no_args(self):
+        args = self._args(
+            {"bt_device": "AA:BB:CC:DD:EE:FF"}, backend="pulse", connected=True
+        )
+        self.assertEqual(args, [])
+
+    def test_no_bt_configured(self):
+        self.assertEqual(self._args({}), [])
 
 
 class TestMigration(unittest.TestCase):

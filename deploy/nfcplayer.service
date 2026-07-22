@@ -1,11 +1,11 @@
 [Unit]
 Description=NFC-triggered music player with admin web UI
-After=sound.target network.target
+After=sound.target network.target bluetooth.target
 
 [Service]
 Type=simple
 User=pi
-SupplementaryGroups=input audio
+SupplementaryGroups=input audio bluetooth
 WorkingDirectory=/home/pi/nfcplayer
 ExecStart=/home/pi/nfcplayer/venv/bin/python -m nfcplayer
 Environment=NFCPLAYER_DB=/home/pi/nfcplayer/nfcplayer.db
