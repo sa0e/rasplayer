@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add card' if is_new else 'Edit card' }} — NFC Player{% endblock %}
+{% block content %}
+
+<h2>{{ 'Add card' if is_new else 'Edit card ' + card.card_id }}</h2>
+
+{% if is_new %}
+<div id="scan-banner" class="scan-banner" hidden>
+  Card scanned: <strong id="scan-id"></strong>
+  <button type="button" id="scan-fill-btn" class="button">Use this ID</button>
+</div>
+<p class="hint">Tap a card on the reader to fill in its ID automatically.</p>
+{% endif %}
+
+<form method="post" class="card-form">
+  <label>Card ID
+    <input name="card_id" id="card_id" value="{{ card.card_id }}"
+           {% if not is_new %}readonly{% else %}required pattern="[0-9]+" inputmode="numeric"{% endif %}>
+  </label>
+
+  <label>Label
+    <input name="label" value="{{ card.label }}" placeholder="e.g. Bedtime songs">
+  </label>
+
+  <label>Play mode
+    <select name="mode" id="mode">
+      {% for value, text in mode_labels.items() %}
+      <option value="{{ value }}" {% if card.mode == value %}selected{% endif %}>{{ text }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <div id="target-group">
+    <label>Target (relative to music folder)
+      <input name="target" id="target" value="{{ card.target }}" placeholder="pick below or type a path">
+    </label>
+
+    <fieldset class="browser">
+      <legend>Browse music folder</legend>
+      <div id="browser-path"></div>
+      <ul id="browser-list"></ul>
+    </fieldset>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">{{ 'Add card' if is_new else 'Save changes' }}</button>
+    <a class="button" href="{{ url_for('index') }}">Cancel</a>
+  </div>
+</form>
+
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='browser.js') }}"></script>
+{% endblock %}

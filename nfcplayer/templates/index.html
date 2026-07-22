@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Cards — NFC Player{% endblock %}
+{% block content %}
+
+<div id="scan-banner" class="scan-banner" {% if not unknown_scan %}hidden{% endif %}>
+  {% if unknown_scan %}
+    Unmapped card scanned: <strong id="scan-id">{{ unknown_scan.card_id }}</strong>
+    <a id="scan-map-link" class="button" href="{{ url_for('card_new', card_id=unknown_scan.card_id) }}">Map this card</a>
+  {% else %}
+    Unmapped card scanned: <strong id="scan-id"></strong>
+    <a id="scan-map-link" class="button" href="{{ url_for('card_new') }}">Map this card</a>
+  {% endif %}
+</div>
+<p class="hint">Tip: tap an unmapped card on the reader and it will appear above — no typing needed.</p>
+
+{% if cards %}
+<table>
+  <thead>
+    <tr><th>Label</th><th>Card ID</th><th>Mode</th><th>Target</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for card in cards %}
+    <tr>
+      <td>{{ card.label or '—' }}</td>
+      <td><code>{{ card.card_id }}</code></td>
+      <td>{{ mode_labels[card.mode] }}</td>
+      <td class="target">{{ card.target or '—' }}</td>
+      <td class="actions">
+        {% if card.mode != 'stop' %}
+        <button class="play-btn" data-card="{{ card.card_id }}" title="Play now">▶</button>
+        {% endif %}
+        <a class="button" href="{{ url_for('card_edit', card_id=card.card_id) }}">Edit</a>
+        <form method="post" action="{{ url_for('card_delete', card_id=card.card_id) }}"
+              onsubmit="return confirm('Delete mapping for card {{ card.card_id }}?');">
+          <button type="submit" class="danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p><button id="stop-btn" class="danger">■ Stop playback</button></p>
+{% else %}
+<p>No cards mapped yet. <a href="{{ url_for('card_new') }}">Add the first one</a>, or tap a card on the reader.</p>
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('.play-btn').forEach(btn => {
+  btn.addEventListener('click', () =>
+    fetch('/api/play/' + btn.dataset.card, {method: 'POST'}));
+});
+const stopBtn = document.getElementById('stop-btn');
+if (stopBtn) stopBtn.addEventListener('click', () =>
+  fetch('/api/stop', {method: 'POST'}));
+</script>
+{% endblock %}

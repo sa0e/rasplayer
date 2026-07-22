@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nfcplayer-dev",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "NFCPLAYER_DEV=1",
+        "NFCPLAYER_DB=/tmp/claude-1000/-home-sa0e-Projects-nfcplayer-software/c7527799-f7df-42a7-8fe7-fa64fca49e04/scratchpad/nfc-dev.db",
+        "NFCPLAYER_MUSIC_ROOT=/tmp/claude-1000/-home-sa0e-Projects-nfcplayer-software/c7527799-f7df-42a7-8fe7-fa64fca49e04/scratchpad/music",
+        ".venv/bin/python", "-m", "nfcplayer", "--fake-input"
+      ],
+      "port": 8080
+    }
+  ]
+}

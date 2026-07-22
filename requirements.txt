@@ -1,0 +1,2 @@
+flask>=3.0
+evdev>=1.6; platform_system == "Linux"

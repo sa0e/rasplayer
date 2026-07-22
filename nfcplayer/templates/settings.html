@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Settings — NFC Player{% endblock %}
+{% block content %}
+
+<h2>Settings</h2>
+
+<form method="post" class="card-form">
+  <label>Music folder (absolute path on the Pi)
+    <input name="music_root" value="{{ settings.music_root }}" required>
+  </label>
+
+  <label>NFC reader device
+    <input name="nfc_device" value="{{ settings.nfc_device }}"
+           placeholder="/dev/input/by-id/usb-...-event-kbd">
+    <small>Leave empty to auto-detect by name. Changes take effect after a service restart
+    (<code>sudo systemctl restart nfcplayer</code>).</small>
+  </label>
+
+  <label>Player command
+    <input name="player_cmd" value="{{ settings.player_cmd }}" placeholder="mpg123 -q">
+    <small>Files to play are appended to this command. Swap in
+    <code>mpv --no-video --really-quiet</code> for non-MP3 formats.</small>
+  </label>
+
+  <label>ALSA output device (optional)
+    <input name="alsa_device" value="{{ settings.alsa_device }}" placeholder="e.g. hw:1,0">
+    <small>Passed to mpg123 as <code>-a</code>. Leave empty for the system default.</small>
+  </label>
+
+  <div class="form-actions">
+    <button type="submit">Save settings</button>
+  </div>
+</form>
+
+{% endblock %}
